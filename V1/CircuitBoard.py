@@ -1,7 +1,6 @@
 import numpy as np
 
 def get_input(prompt, data_type):
-    """Gets user input and converts it to the specified data type."""
     while True:
         try:
             value = input(prompt)
@@ -10,7 +9,6 @@ def get_input(prompt, data_type):
             print(f"Invalid input. Please enter a {data_type.__name__}.")
 
 def get_resistor_values(num_resistors):
-    """Gets resistance values for all resistors."""
     resistor_values = {}
     for i in range(num_resistors):
         while True:
@@ -23,11 +21,10 @@ def get_resistor_values(num_resistors):
     return resistor_values
 
 def get_mesh_definitions(num_meshes, resistor_values):
-    """Gets the resistor IDs for each mesh."""
     mesh_definitions = {}
     for i in range(num_meshes):
         while True:
-            res_ids_str = input(f"Enter resistor IDs for Mesh {i + 1} (comma-separated): ")
+            res_ids_str = input(f"Enter resistor IDs for Mesh {i + 1} (comma-separated like 1,2,... ):  ")
             res_ids = [int(r_id.strip()) for r_id in res_ids_str.split(',')]
             if all(r_id in resistor_values for r_id in res_ids):
                 mesh_definitions[i + 1] = res_ids
@@ -59,7 +56,6 @@ def get_shared_resistors(num_resistors, num_meshes):
     return shared_resistors
 
 def calculate_mesh_currents(num_meshes, resistor_values, mesh_definitions, shared_resistors, voltage_source):
-    """Calculates the mesh currents."""
     R_matrix = np.zeros((num_meshes, num_meshes))
     V_vector = np.zeros(num_meshes)
 
@@ -83,8 +79,7 @@ def calculate_mesh_currents(num_meshes, resistor_values, mesh_definitions, share
         return None, None, None
 
 def display_results(R_matrix, V_vector, mesh_currents):
-    """Displays the results."""
-    print("\n--- Input Summary ---")
+    print("\n--- Input Data ---")
     print(f"Resistance Matrix [R]:\n{R_matrix}")
     print(f"Voltage Vector [V]:\n{V_vector}")
 
@@ -97,8 +92,7 @@ def display_results(R_matrix, V_vector, mesh_currents):
         print("\nCalculation failed.")
 
 def main():
-    """Main function to run the calculator."""
-    print("Welcome to the Mesh Analysis Calculator (Text Version)")
+    print("Welcome to the CircuitBoard V1")
 
     num_resistors = get_input("Enter the number of resistors: ", int)
     voltage_source = get_input("Enter the main voltage source (V): ", float)
