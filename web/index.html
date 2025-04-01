@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circuit Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="simulator.js" defer></script>
+    <style>
+        .grid-cell {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+        .grid-cell:hover {
+            background-color: #f8fafc;
+        }
+        .component {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .wire {
+            position: absolute;
+            background-color: #000;
+            z-index: 5;
+        }
+        .horizontal-wire {
+            height: 4px;
+            width: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .vertical-wire {
+            width: 4px;
+            height: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .resistor {
+            width: 30px;
+            height: 12px;
+            background-color: #f59e0b;
+            border: 2px solid #92400e;
+            border-radius: 2px;
+        }
+        .battery {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #3b82f6;
+            position: relative;
+        }
+        .battery::before, .battery::after {
+            content: '';
+            position: absolute;
+            background-color: #3b82f6;
+        }
+        .battery::before {
+            width: 4px;
+            height: 8px;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .battery::after {
+            width: 4px;
+            height: 8px;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .selected-tool {
+            background-color: #e2e8f0;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center text-blue-600 mb-8">Circuit Simulator</h1>
+        
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Tools Panel -->
+            <div class="bg-white rounded-lg shadow-md p-6 w-full lg:w-64">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Components</h2>
+                <div class="space-y-3">
+                    <button id="tool-wire" class="tool-btn w-full p-3 border rounded-lg flex items-center justify-center hover:bg-gray-100">
+                        <div class="wire horizontal-wire"></div>
+                        <span class="ml-2">Wire</span>
+                    </button>
+                    <button id="tool-resistor" class="tool-btn w-full p-3 border rounded-lg flex items-center justify-center hover:bg-gray-100">
+                        <div class="resistor"></div>
+                        <span class="ml-2">Resistor</span>
+                    </button>
+                    <button id="tool-battery" class="tool-btn w-full p-3 border rounded-lg flex items-center justify-center hover:bg-gray-100">
+                        <div class="battery"></div>
+                        <span class="ml-2">Battery</span>
+                    </button>
+                    <button id="tool-delete" class="tool-btn w-full p-3 border rounded-lg flex items-center justify-center hover:bg-gray-100 bg-red-50 text-red-600">
+                        🗑️ <span class="ml-2">Delete</span>
+                    </button>
+                </div>
+
+                <div class="mt-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800">Properties</h2>
+                    <div id="properties-panel" class="space-y-4">
+                        <div class="hidden" id="resistor-props">
+                            <label class="block text-sm font-medium text-gray-700">Resistance (Ω)</label>
+                            <input type="number" min="1" value="10" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div class="hidden" id="battery-props">
+                            <label class="block text-sm font-medium text-gray-700">Voltage (V)</label>
+                            <input type="number" value="9" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <button id="analyze-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">
+                        Analyze Circuit
+                    </button>
+                    <button id="clear-btn" class="w-full mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg">
+                        Clear All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Circuit Canvas -->
+            <div class="flex-1">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800">Circuit Grid</h2>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-600">Grid Size:</span>
+                            <input id="grid-size" type="number" min="5" max="20" value="10" class="w-16 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div id="grid-container" class="overflow-auto border rounded-lg">
+                        <!-- Grid will be generated here -->
+                    </div>
+                </div>
+
+                <!-- Analysis Results -->
+                <div id="results-panel" class="mt-6 bg-white rounded-lg shadow-md p-6 hidden">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800">Analysis Results</h2>
+                    <div id="results-content" class="space-y-2">
+                        <!-- Results will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+    // Constants
+    const GRID_SIZE = 10;
+    const CELL_SIZE = 40;
+    
+    // State variables
+    let currentTool = null;
+    let selectedComponent = null;
+    let grid = [];
+    let components = [];
+    let wires = [];
+    
+    // DOM elements
+    const gridContainer = document.getElementById('grid-container');
+    const toolButtons = document.querySelectorAll('.tool-btn');
+    const propertiesPanel = document.getElementById('properties-panel');
+    const resistorProps = document.getElementById('resistor-props');
+    const batteryProps = document.getElementById('battery-props');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const resultsPanel = document.getElementById('results-panel');
+    const resultsContent = document.getElementById('results-content');
+    const gridSizeInput = document.getElementById('grid-size');
+    
+    // Initialize the grid
+    function initializeGrid(size) {
+        gridContainer.innerHTML = '';
+        grid = Array(size).fill().map(() => Array(size).fill(null));
+        components = [];
+        wires = [];
+        
+        for (let y = 0; y < size; y++) {
+            const row = document.createElement('div');
+            row.className = 'flex';
+            
+            for (let x = 0; x < size; x++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell';
+                cell.dataset.x = x;
+                cell.dataset.y = y;
+                
+                cell.addEventListener('click', () => handleCellClick(x, y));
+                
+                row.appendChild(cell);
+                grid[y][x] = cell;
+            }
+            
+            gridContainer.appendChild(row);
+        }
+    }
+    
+    // Handle cell clicks
+    function handleCellClick(x, y) {
+        if (!currentTool) return;
+        
+        const cell = grid[y][x];
+        
+        if (currentTool === 'wire') {
+            // For simplicity, we'll just toggle horizontal wires
+            if (cell.querySelector('.wire')) {
+                // Remove wire if it exists
+                cell.querySelector('.wire').remove();
+                wires = wires.filter(w => !(w.x === x && w.y === y));
+            } else {
+                // Add wire
+                const wire = document.createElement('div');
+                wire.className = 'wire horizontal-wire';
+                cell.appendChild(wire);
+                wires.push({ x, y, direction: 'horizontal' });
+            }
+        } 
+        else if (currentTool === 'resistor') {
+            // Remove any existing component in this cell
+            if (cell.querySelector('.component')) {
+                cell.querySelector('.component').remove();
+                components = components.filter(c => !(c.x === x && c.y === y));
+            }
+            
+            // Add resistor
+            const component = document.createElement('div');
+            component.className = 'component';
+            const resistor = document.createElement('div');
+            resistor.className = 'resistor';
+            component.appendChild(resistor);
+            cell.appendChild(component);
+            
+            components.push({
+                type: 'resistor',
+                x, y,
+                resistance: 10,
+                element: component
+            });
+            
+            // Show resistor properties
+            showProperties('resistor', x, y);
+        }
+        else if (currentTool === 'battery') {
+            // Remove any existing component in this cell
+            if (cell.querySelector('.component')) {
+                cell.querySelector('.component').remove();
+                components = components.filter(c => !(c.x === x && c.y === y));
+            }
+            
+            // Add battery
+            const component = document.createElement('div');
+            component.className = 'component';
+            const battery = document.createElement('div');
+            battery.className = 'battery';
+            component.appendChild(battery);
+            cell.appendChild(component);
+            
+            components.push({
+                type: 'battery',
+                x, y,
+                voltage: 9,
+                element: component
+            });
+            
+            // Show battery properties
+            showProperties('battery', x, y);
+        }
+        else if (currentTool === 'delete') {
+            // Remove any component or wire in this cell
+            if (cell.querySelector('.component')) {
+                cell.querySelector('.component').remove();
+                components = components.filter(c => !(c.x === x && c.y === y));
+            }
+            if (cell.querySelector('.wire')) {
+                cell.querySelector('.wire').remove();
+                wires = wires.filter(w => !(w.x === x && w.y === y));
+            }
+            
+            propertiesPanel.querySelectorAll('div').forEach(el => el.classList.add('hidden'));
+        }
+    }
+    
+    // Show properties for a component
+    function showProperties(type, x, y) {
+        // Hide all property panels first
+        propertiesPanel.querySelectorAll('div').forEach(el => el.classList.add('hidden'));
+        
+        // Find the component
+        const component = components.find(c => c.x === x && c.y === y);
+        if (!component) return;
+        
+        if (type === 'resistor') {
+            resistorProps.classList.remove('hidden');
+            const input = resistorProps.querySelector('input');
+            input.value = component.resistance;
+            
+            input.addEventListener('change', (e) => {
+                component.resistance = parseFloat(e.target.value);
+            });
+        }
+        else if (type === 'battery') {
+            batteryProps.classList.remove('hidden');
+            const input = batteryProps.querySelector('input');
+            input.value = component.voltage;
+            
+            input.addEventListener('change', (e) => {
+                component.voltage = parseFloat(e.target.value);
+            });
+        }
+    }
+    
+    // Perform circuit analysis (simplified mesh analysis)
+    function analyzeCircuit() {
+        // This is a simplified version - a real implementation would require
+        // a proper circuit analysis algorithm
+        
+        // Find all batteries
+        const batteries = components.filter(c => c.type === 'battery');
+        if (batteries.length === 0) {
+            showResults("No batteries in the circuit. Please add at least one battery.");
+            return;
+        }
+        
+        // Find all resistors
+        const resistors = components.filter(c => c.type === 'resistor');
+        if (resistors.length === 0) {
+            showResults("No resistors in the circuit. Please add at least one resistor.");
+            return;
+        }
+        
+        // Check if components are connected (simplified check)
+        if (!areComponentsConnected()) {
+            showResults("Components are not properly connected. Please ensure all components are connected with wires.");
+            return;
+        }
+        
+        // Simplified calculation (not actual mesh analysis)
+        const totalVoltage = batteries.reduce((sum, b) => sum + b.voltage, 0);
+        const totalResistance = resistors.reduce((sum, r) => sum + r.resistance, 0);
+        const current = totalVoltage / totalResistance;
+        
+        // Display results
+        let resultHTML = `
+            <div class="p-4 bg-blue-50 rounded-lg">
+                <h3 class="font-medium text-blue-800">Simplified Circuit Analysis</h3>
+                <p class="mt-2">Total Voltage: ${totalVoltage.toFixed(2)} V</p>
+                <p>Total Resistance: ${totalResistance.toFixed(2)} Ω</p>
+                <p class="font-semibold">Calculated Current: ${current.toFixed(2)} A</p>
+            </div>
+            <div class="mt-4 text-sm text-gray-600">
+                Note: This is a simplified calculation. A full mesh analysis would require a more complex algorithm.
+            </div>
+        `;
+        
+        showResults(resultHTML);
+    }
+    
+    // Check if components are connected (simplified version)
+    function areComponentsConnected() {
+        // This is a placeholder - a real implementation would need to trace connections
+        return wires.length > 0;
+    }
+    
+    // Show analysis results
+    function showResults(content) {
+        resultsContent.innerHTML = content;
+        resultsPanel.classList.remove('hidden');
+    }
+    
+    // Clear the circuit
+    function clearCircuit() {
+        initializeGrid(parseInt(gridSizeInput.value));
+        propertiesPanel.querySelectorAll('div').forEach(el => el.classList.add('hidden'));
+        resultsPanel.classList.add('hidden');
+    }
+    
+    // Event listeners
+    toolButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Remove selected class from all buttons
+            toolButtons.forEach(btn => btn.classList.remove('selected-tool'));
+            
+            // Add selected class to clicked button
+            button.classList.add('selected-tool');
+            
+            // Set current tool
+            currentTool = button.id.replace('tool-', '');
+            
+            // Hide properties panel when selecting a tool
+            propertiesPanel.querySelectorAll('div').forEach(el => el.classList.add('hidden'));
+        });
+    });
+    
+    analyzeBtn.addEventListener('click', analyzeCircuit);
+    clearBtn.addEventListener('click', clearCircuit);
+    
+    gridSizeInput.addEventListener('change', () => {
+        clearCircuit();
+    });
+    
+    // Initialize
+    initializeGrid(GRID_SIZE);
+});
+  </script>
+</html>
